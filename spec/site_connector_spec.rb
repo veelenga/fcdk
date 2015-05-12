@@ -5,17 +5,65 @@ require 'fcdk/site_connector'
 module Fcdk
   describe SiteConnector do
 
-    describe '#get_fixtures' do
+    def mock_subject(page)
+      allow(subject).to receive(:get_page_source).and_return(page)
+      subject
+    end
 
+    describe '#get_seasons' do
+      context 'when page contains seasons' do
+        let(:page) do
+          <<-EOP
+            <div id='content'>
+              <form action='#' class='select-form'>
+                <fieldset>
+                  <select id='season' name='season'>
+                    <option value="2014_2015" selected>2014/2015</option>
+                    <option value="2013_2014" >2013/2014</option>
+                    <option value="2012_2013" >2012/2013</option>
+                  </select>
+                </fieldset>
+              </form>
+            </div>
+          EOP
+        end
+
+        let(:seasons) { mock_subject(page).get_seasons }
+
+        it 'detects all seasons' do
+          expect(seasons).to match_array ['2014_2015', '2013_2014', '2012_2013']
+        end
+      end
+
+      context 'when page does not contain seasons' do
+        let(:page) do
+          <<-EOP
+            <div id='content'>
+              <form>
+                <fieldset/>
+              </form>
+            </div>
+          EOP
+        end
+
+        let(:seasons) { mock_subject(page).get_seasons }
+
+        it 'returns empty list' do
+          expect(seasons).to be_empty
+        end
+      end
+    end
+
+    describe '#get_fixtures' do
       def search(fixtures, key)
         fixtures.inject([]) do |values, hash|
           values << hash[key]
         end
       end
 
-      context 'when page has few fixtures' do
-        let(:fixtures) do
-          html = <<-EOH
+      context 'when page contains fixtures' do
+        let(:page) do
+          <<-EOH
             <div id='content'>
               <div class='box'>
                 <table class='result'>
@@ -41,14 +89,11 @@ module Fcdk
               </div>
             </div>
           EOH
-          object = SiteConnector.new
-          allow(object).to receive(:get_page_source)
-            .and_return(html)
-
-          object.get_fixtures
         end
 
-        it 'detects all fixtures on the page' do
+        let(:fixtures) { mock_subject(page).get_fixtures }
+
+        it 'detects all fixtures' do
           expect(fixtures.size).to be 2
         end
 
@@ -84,26 +129,18 @@ module Fcdk
 
       end
 
-      context 'when page does not have fixtures' do
-        let(:fixtures) do
-          html = <<-EOH
-            <div id='content'/>
-          EOH
-          object = SiteConnector.new
-          allow(object).to receive(:get_page_source)
-            .and_return(html)
+      context 'when page does not contain fixtures' do
+        let(:page) { "<div id='content' />" }
+        let(:fixtures) { mock_subject(page).get_fixtures }
 
-          object.get_fixtures
-        end
         it 'returns empty list' do
           expect(fixtures).to be_empty
         end
       end
 
       context "when 'season' parameter passed" do
-
-        let(:connector) do
-          html_2015 = <<-EOH
+        let(:page_2015) do
+          <<-EOH
             <div id='content'>
               <div class='box'>
                 <table class='result'>
@@ -121,8 +158,10 @@ module Fcdk
               </div>
             </div>
           EOH
+        end
 
-          html_2014 = <<-EOH
+        let(:page_2014) do
+          <<-EOH
             <div id='content'>
               <div class='box'>
                 <table class='result'>
@@ -140,24 +179,25 @@ module Fcdk
               </div>
             </div>
           EOH
+        end
 
-          object = SiteConnector.new
-          allow(object).to receive(:get_page_source)
-            .with('matches/dynamo/matches/?season=2014')
-            .and_return(html_2014)
-
-          allow(object).to receive(:get_page_source)
-            .with('matches/dynamo/matches/?season=2015')
-            .and_return(html_2015)
-
-          allow(object).to receive(:get_page_source)
+        let(:connector) do
+          allow(subject).to receive(:get_page_source)
             .with('matches/dynamo/matches/?season=2013')
             .and_return('')
 
-          object
+          allow(subject).to receive(:get_page_source)
+            .with('matches/dynamo/matches/?season=2014')
+            .and_return(page_2014)
+
+          allow(subject).to receive(:get_page_source)
+            .with('matches/dynamo/matches/?season=2015')
+            .and_return(page_2015)
+
+          subject
         end
 
-        it 'returns fixtures for that corresponding season' do
+        it 'returns fixtures for the corresponding season' do
           fixtures = connector.get_fixtures('2015')
           expect(search(fixtures, :date)).to match_array ['2015']
 
