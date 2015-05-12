@@ -1,4 +1,4 @@
-# Fcdk
+# Fcdk [![Build Status](https://api.travis-ci.org/veelenga/fcdk.svg?branch=master)](https://travis-ci.org/veelenga/fcdk)
 
 ![](./assets/dk_logo.jpg)
 
