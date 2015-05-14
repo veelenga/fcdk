@@ -13,20 +13,25 @@ module Fcdk
     # Match object is comparable with other Match object
     # by match date.
     #
-    #   Match.new({:date => Date.today,
+    #   Match.new({:month => 3,
+    #              :day => 12,
     #              :opponent => 'Shakhtar',
     #              :home => true,
     #              :competition => 'Ukrainian Premier League',
     #              :round => 26,
     #              :result => Result.new(5, 0)})
     class Match
-      attr_accessor :date, :opponent, :home,
+      attr_accessor :month, :day, :opponent, :home,
         :competition, :round, :result
 
       def initialize(params)
-        date = params[:date]
-        @date = date if date.kind_of? Date
+        month = params[:month]
+        day = params[:day]
+        raise ArgumentError.new('Wrong month') if month && (month < 1 || month > 12)
+        raise ArgumentError.new('Wrong day') if day && (day < 1 || day > 31)
 
+        @month = month
+        @day = day
         @opponent = params[:opponent]
         @home = params[:home]
         @competition = params[:competition]
@@ -35,7 +40,9 @@ module Fcdk
       end
 
       def <=>(other)
-        @date <=> other.date if other.kind_of? Match
+        return nil unless other.kind_of? Match
+        return @month <=> other.month if @month != other.month
+        @day <=> other.day
       end
     end
   end
